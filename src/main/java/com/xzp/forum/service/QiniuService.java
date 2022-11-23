@@ -25,7 +25,7 @@ public class QiniuService {
 	String ACCESS_KEY = "VT8wfuxppE2jq6FzRcnSQvPkDfr0V45jA581P2GM";
 	String SECRET_KEY = "_xzbgHK5Ej44XPoeML36CvunX6R6alRvAjO0xJ96";
 	// 要上传的空间
-	String bucketname = "cloudImg/";
+	String bucketname = "shangke7ns";
 
 	// 密钥配置
 	Auth auth = Auth.create(ACCESS_KEY, SECRET_KEY);
