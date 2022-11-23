@@ -22,19 +22,19 @@ public class QiniuService {
 	private static final Logger logger = LoggerFactory.getLogger(QiniuService.class);
 
 	// 设置好账号的ACCESS_KEY和SECRET_KEY
-	String ACCESS_KEY = "gGFf-cA7cy-hyhN3jwTByS7h8SSDuGMtyKFZIIVf";
-	String SECRET_KEY = "7X51IlDOMO6UjQfL_vDcXPIr2PnLOickH1F2m30u";
+	String ACCESS_KEY = "VT8wfuxppE2jq6FzRcnSQvPkDfr0V45jA581P2GM";
+	String SECRET_KEY = "_xzbgHK5Ej44XPoeML36CvunX6R6alRvAjO0xJ96";
 	// 要上传的空间
-	String bucketname = "nowcoder";
+	String bucketname = "cloudImg/";
 
 	// 密钥配置
 	Auth auth = Auth.create(ACCESS_KEY, SECRET_KEY);
 	// 构造一个带指定Zone对象的配置类
-	Configuration cfg = new Configuration(Zone.zone2());
+	Configuration cfg = new Configuration(Zone.autoZone());
 	// ...其他参数参考类注释
 	UploadManager uploadManager = new UploadManager(cfg);
 
-	private static String QINIU_IMAGE_DOMAIN = "http://ox6xu9hb7.bkt.clouddn.com/";
+	private static String QINIU_IMAGE_DOMAIN = "https://imghost.unknownshangke.top/";
 
 	// 简单上传，使用默认策略，只需要设置上传的空间名就可以了
 	public String getUpToken() {
