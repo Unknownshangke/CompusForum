@@ -9,11 +9,11 @@ import org.springframework.context.annotation.Bean;
 import com.github.pagehelper.PageHelper;
 
 @SpringBootApplication
-public class JnuForumApplication {
+public class CampusForumApplication {
 
 	public static void main(String[] args) {
 		System.setProperty("spring.devtools.restart.enabled", "false");
-		SpringApplication.run(JnuForumApplication.class, args);
+		SpringApplication.run(CampusForumApplication.class, args);
 	}
 	
 	// PageHelper的配置
