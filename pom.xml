@@ -5,7 +5,7 @@
 
 	<groupId>com.shangke</groupId>
 	<artifactId>campus_forum</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>campus_forum</name>
@@ -89,7 +89,7 @@
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>fastjson</artifactId>
-			<version>1.2.31</version>
+			<version>1.2.83</version>
 		</dependency>
 
 		<dependency>
