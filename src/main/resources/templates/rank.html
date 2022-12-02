@@ -10,12 +10,12 @@
 	<article class="container" style="padding: 3% 0 2%;">
 		<header class="row">
 			<div class="col s12">
-				<blockquote class="flow-text left" th:text="|排行榜： |">Ranking</blockquote>
+				<blockquote class="flow-text left" th:text="|排行榜: |">Ranking</blockquote>
 			</div>
 		</header>
 		<ul class="collection" th:each="pointName : ${pointSet}">
 			<li class="collection-item avatar">
-				<img src="http://pj9qy0grp.bkt.clouddn.com/private.jpg" alt="" class="circle"/> 
+				<img src="https://imghost.unknownshangke.top/cloudImg/private%20.png" alt="" class="circle"/>
 				<a class="title" th:text="${pointName}" th:href="@{'/profile/' + ${userDao.getIdByUsername(pointName)}}">pointName</a>
 				<p th:text="|得分:|+${userDao.getPoints(userDao.getIdByUsername(pointName))}">
 					point
