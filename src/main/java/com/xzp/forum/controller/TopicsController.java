@@ -67,6 +67,7 @@ public class TopicsController {
 		model.addAttribute("totalPage", pageTopic.getTotalPage());
 		model.addAttribute("hasNext", pageTopic.getIsMore());
 		model.addAttribute("isUserTopicPage", false);
+		model.addAttribute("category", category);
 		return "topics";
 	}
 
@@ -95,22 +96,24 @@ public class TopicsController {
 
 	private String setHeader(String category) {
 		switch (category) {
-			case "se":
-				return "Java Standard Edition";
-			case "ee":
-				return "Java Enterprise Edition";
-			case "mbs":
-				return "MyBatis";
-			case "spring":
-				return "Spring Framework";
-			case "web":
-				return "HTML/CSS/JavaScript";
+			case "news":
+				return "校园新闻";
+			case "study":
+				return "学习交流";
+			case "life":
+				return "校园生活";
+			case "club":
+				return "社团活动";
+			case "lost":
+				return "失物招领";
 			case "other":
 				return "其他";
 			case "all":
-				return "All topics";
+				return "全部话题";
+			case "user":
+				return "用户话题";
 			default:
-				return "User's topics";
+				return "用户话题";
 		}
 	}
 

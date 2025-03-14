@@ -15,10 +15,14 @@ import com.xzp.forum.model.User;
 import com.xzp.forum.util.HostHolder;
 import com.xzp.forum.service.UserService;
 import com.xzp.forum.dao.MessageDao;
+import com.xzp.forum.dao.UserModeratorPermissionDao;
+import com.xzp.forum.model.UserModeratorPermission;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
 @RequestMapping("/admin")
-@PreAuthorize("hasRole('ADMIN') or hasRole('ROLE_ADMIN')")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     @Autowired
@@ -33,12 +37,16 @@ public class AdminController {
     @Autowired
     private MessageDao messageDao;
 
+    @Autowired
+    private UserModeratorPermissionDao userModeratorPermissionDao;
+
     @GetMapping("/users")
     public String userManagement(Model model) {
+        // 获取当前登录用户
         User currentUser = hostHolder.getUser();
 
         // 检查用户是否为管理员
-        if (currentUser == null || !"ADMIN".equals(currentUser.getRole())) {
+        if (currentUser == null || !currentUser.isAdmin()) {
             return "redirect:/topics/all/1";
         }
 
@@ -50,14 +58,14 @@ public class AdminController {
         return "admin/userManagement";
     }
 
-    @PostMapping("/users/{userId}/role")
+    @PostMapping("/users/{userId}/update-role")
     @ResponseBody
     public String updateUserRole(@PathVariable Long userId, @RequestParam String role) {
         // 获取当前登录用户
         User currentUser = hostHolder.getUser();
 
         // 检查用户是否为管理员
-        if (currentUser == null || !"ADMIN".equals(currentUser.getRole())) {
+        if (currentUser == null || !currentUser.isAdmin()) {
             return "error:unauthorized";
         }
 
@@ -66,27 +74,26 @@ public class AdminController {
             return "用户不存在";
         }
 
-        switch (role) {
-            case "ADMIN":
-                user.setRole("ADMIN");
-                break;
-            case "MODERATOR":
-                user.setRole("MODERATOR");
-                break;
-            case "USER":
-                user.setRole("USER");
-                break;
-            default:
-                return "无效的角色";
+        // 不允许修改管理员的角色
+        if ("ADMIN".equals(user.getRole())) {
+            return "不能修改管理员的角色";
         }
 
-        userService.updateUser(user);
-        return "角色更新成功";
+        // 设置新角色
+        user.setRole(role);
+
+        // 保存更新
+        try {
+            userService.updateUser(user);
+            return "角色更新成功";
+        } catch (Exception e) {
+            return "角色更新失败";
+        }
     }
 
     @PostMapping("/users/{userId}/moderator-sections")
     @ResponseBody
-    public String updateModeratorSections(@PathVariable Long userId, @RequestParam("sections") List<String> sections) {
+    public String updateModeratorSections(@PathVariable Long userId, @RequestParam("sections") String sectionsJson) {
         User user = userService.getUserById(userId);
         if (user == null) {
             return "用户不存在";
@@ -96,21 +103,50 @@ public class AdminController {
             return "该用户不是版务";
         }
 
-        user.getModeratorSections().clear();
-        sections.forEach(user::addModeratorSection);
-        userService.updateUser(user);
+        try {
+            // 将JSON字符串转换为List
+            ObjectMapper mapper = new ObjectMapper();
+            List<String> sections = mapper.readValue(sectionsJson, new TypeReference<List<String>>() {});
 
-        return "版块权限更新成功";
+            // 先删除该用户的所有版块权限
+            userModeratorPermissionDao.deleteByUserId(userId);
+
+            // 添加新的版块权限
+            List<UserModeratorPermission> permissions = new ArrayList<>();
+            for (String section : sections) {
+                UserModeratorPermission permission = new UserModeratorPermission();
+                permission.setUserId(userId);
+                permission.setSection(section);
+                permissions.add(permission);
+            }
+
+            if (!permissions.isEmpty()) {
+                userModeratorPermissionDao.addPermissions(permissions);
+            }
+
+            return "版块权限更新成功";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "版块权限更新失败：" + e.getMessage();
+        }
     }
 
     @GetMapping("/users/{userId}/moderator-sections")
     @ResponseBody
     public List<String> getModeratorSections(@PathVariable Long userId) {
-        User user = userService.getUserById(userId);
-        if (user == null) {
-            return null;
+        return userModeratorPermissionDao.findSectionsByUserId(userId);
+    }
+
+    @DeleteMapping("/users/{userId}/moderator-sections")
+    @ResponseBody
+    public String deleteModeratorSections(@PathVariable Long userId) {
+        try {
+            userModeratorPermissionDao.deleteByUserId(userId);
+            return "版块权限移除成功";
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "版块权限移除失败：" + e.getMessage();
         }
-        return new ArrayList<>(user.getModeratorSections());
     }
 
     @PostMapping("/users/{userId}/ban")

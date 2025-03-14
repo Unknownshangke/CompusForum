@@ -117,7 +117,13 @@ public class User implements UserDetails {
 	}
 
 	public void setAdmin(boolean admin) {
-		isAdmin = admin;
+		this.isAdmin = admin;
+		if (admin) {
+			this.role = "ADMIN";
+			this.isModerator = false;
+		} else if (!this.isModerator) {
+			this.role = "USER";
+		}
 	}
 
 	public boolean isModerator() {
@@ -125,7 +131,13 @@ public class User implements UserDetails {
 	}
 
 	public void setModerator(boolean moderator) {
-		isModerator = moderator;
+		this.isModerator = moderator;
+		if (moderator) {
+			this.role = "MODERATOR";
+			this.isAdmin = false;
+		} else if (!this.isAdmin) {
+			this.role = "USER";
+		}
 	}
 
 	public boolean isBanned() {
@@ -190,6 +202,21 @@ public class User implements UserDetails {
 
 	public void setRole(String role) {
 		this.role = role;
+		// 同步角色标志位
+		switch (role) {
+			case "ADMIN":
+				this.isAdmin = true;
+				this.isModerator = false;
+				break;
+			case "MODERATOR":
+				this.isAdmin = false;
+				this.isModerator = true;
+				break;
+			case "USER":
+				this.isAdmin = false;
+				this.isModerator = false;
+				break;
+		}
 	}
 
 	public List<Answer> getAnswers() {
@@ -211,10 +238,25 @@ public class User implements UserDetails {
 	@Override
 	@JsonIgnore
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		List<GrantedAuthority> authorities = new ArrayList<>();
-		if (role != null) {
-			authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+		Set<GrantedAuthority> authorities = new HashSet<>();
+
+		// 添加基本角色
+		authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+
+		// 添加管理员权限
+		if (isAdmin) {
+			authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
 		}
+
+		// 添加版主权限
+		if (isModerator) {
+			authorities.add(new SimpleGrantedAuthority("ROLE_MODERATOR"));
+			// 添加版块特定权限
+			for (String section : moderatorSections) {
+				authorities.add(new SimpleGrantedAuthority("SECTION_" + section.toUpperCase()));
+			}
+		}
+
 		return authorities;
 	}
 

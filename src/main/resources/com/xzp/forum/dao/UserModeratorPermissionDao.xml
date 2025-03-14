@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.xzp.forum.dao.UserModeratorPermissionDao">
+    <sql id="table">user_moderator_permissions</sql>
+    <sql id="selectFields">id, user_id, section, created_time</sql>
+
+    <insert id="addPermission" parameterType="com.xzp.forum.model.UserModeratorPermission">
+        INSERT INTO
+        <include refid="table"/>
+        (user_id, section)
+        VALUES
+        (#{userId}, #{section})
+    </insert>
+
+    <insert id="addPermissions">
+        INSERT INTO
+        <include refid="table"/>
+        (user_id, section)
+        VALUES
+        <foreach collection="permissions" item="item" separator=",">
+            (#{item.userId}, #{item.section})
+        </foreach>
+    </insert>
+
+    <select id="findSectionsByUserId" resultType="string">
+        SELECT section
+        FROM <include refid="table"/>
+        WHERE user_id = #{userId}
+    </select>
+
+    <delete id="deleteByUserId">
+        DELETE FROM
+        <include refid="table"/>
+        WHERE user_id = #{userId}
+    </delete>
+
+    <delete id="deleteByUserIdAndSection">
+        DELETE FROM
+        <include refid="table"/>
+        WHERE user_id = #{userId}
+        AND section = #{section}
+    </delete>
+</mapper>

@@ -130,12 +130,12 @@
             <!-- 桌面端导航 -->
             <div class="nav-container desktop-nav">
                 <ul id="nav-left" class="left">
-                    <li class="nav-item"><a th:href="@{'/topics/all/1'}">All</a></li>
-                    <li class="nav-item"><a th:href="@{'/topics/se/1'}">Java SE</a></li>
-                    <li class="nav-item"><a th:href="@{'/topics/ee/1'}">Java EE</a></li>
-                    <li class="nav-item"><a th:href="@{'/topics/mbs/1'}">MyBatis</a></li>
-                    <li class="nav-item"><a th:href="@{'/topics/spring/1'}">Spring</a></li>
-                    <li class="nav-item"><a th:href="@{'/topics/web/1'}">前端</a></li>
+                    <li class="nav-item"><a th:href="@{'/topics/all/1'}">全部</a></li>
+                    <li class="nav-item"><a th:href="@{'/topics/news/1'}">校园新闻</a></li>
+                    <li class="nav-item"><a th:href="@{'/topics/study/1'}">学习交流</a></li>
+                    <li class="nav-item"><a th:href="@{'/topics/life/1'}">校园生活</a></li>
+                    <li class="nav-item"><a th:href="@{'/topics/club/1'}">社团活动</a></li>
+                    <li class="nav-item"><a th:href="@{'/topics/lost/1'}">失物招领</a></li>
                     <li class="nav-item"><a th:href="@{'/topics/other/1'}">其他</a></li>
                 </ul>
                 <ul id="nav-right" class="right">
@@ -151,12 +151,12 @@
             </div>
             <!-- 移动端导航 -->
             <ul class="side-nav mobile-nav" id="mobile-nav">
-                <li><a th:href="@{'/topics/all/1'}">All</a></li>
-                <li><a th:href="@{'/topics/se/1'}">Java SE</a></li>
-                <li><a th:href="@{'/topics/ee/1'}">Java EE</a></li>
-                <li><a th:href="@{'/topics/mbs/1'}">MyBatis</a></li>
-                <li><a th:href="@{'/topics/spring/1'}">Spring</a></li>
-                <li><a th:href="@{'/topics/web/1'}">前端</a></li>
+                <li><a th:href="@{'/topics/all/1'}">全部</a></li>
+                <li><a th:href="@{'/topics/news/1'}">校园新闻</a></li>
+                <li><a th:href="@{'/topics/study/1'}">学习交流</a></li>
+                <li><a th:href="@{'/topics/life/1'}">校园生活</a></li>
+                <li><a th:href="@{'/topics/club/1'}">社团活动</a></li>
+                <li><a th:href="@{'/topics/lost/1'}">失物招领</a></li>
                 <li><a th:href="@{'/topics/other/1'}">其他</a></li>
                 <li><a th:href="@{'/profile/'+${user.getId()}}" th:text="${user.getUsername()}">简介</a></li>
                 <li><a th:href="@{'/addTopic'}">发表</a></li>
