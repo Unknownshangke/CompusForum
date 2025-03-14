@@ -4,10 +4,11 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import com.xzp.forum.model.Topic;
+import org.apache.ibatis.annotations.*;
 
 /**
  * topic的dao层
- * 
+ *
  * @author xiezhiping
  *
  */
@@ -23,7 +24,7 @@ public interface TopicDao {
 	 * @return int
 	 */
 	int addTopic(Topic topic);
-	
+
 	/**
 	 * 根据id删除一条话题记录
 	 * @param id
@@ -43,31 +44,46 @@ public interface TopicDao {
 	 * @return Topic
 	 */
 	Topic findTopicById(@Param("id") Long id);
-	
+
 	/**
 	 * 获取目录category下的所有话题
 	 * @param category
 	 * @return List<Topic>
 	 */
 	List<Topic> findTopicsByCategoryOrderByCreatedDateDesc(@Param("category") String category);
-	
+
 	/**
 	 * 获取用户发布的所有话题记录
 	 * @param id
 	 * @return List<Topic>
 	 */
 	List<Topic> findTopicsByUser_IdOrderByCreatedDateDesc(@Param("id") Long id);
-	 
+
 	/**
 	 * 获得所有话题
 	 * @return List<Topic>
 	 */
 	List<Topic> findAll();
-	
+
 	/**
 	 * 根据topic的id获得用户id
 	 * @param id
 	 * @return int
 	 */
 	int getId_userById(@Param("id") Long id);
+
+	@Select("SELECT * FROM topics WHERE id = #{id}")
+	Topic getTopicById(Long id);
+
+	@Select("SELECT * FROM topics WHERE section = #{section} ORDER BY created_date DESC LIMIT #{page} * 10, 10")
+	List<Topic> getTopicsBySection(@Param("section") String section, @Param("page") int page);
+
+	@Delete("DELETE FROM topics WHERE id = #{id}")
+	void deleteTopic(Long id);
+
+	@Update("UPDATE topics SET is_locked = true WHERE id = #{id}")
+	void lockTopic(Long id);
+
+	@Update("UPDATE topics SET is_locked = false WHERE id = #{id}")
+	void unlockTopic(Long id);
 }

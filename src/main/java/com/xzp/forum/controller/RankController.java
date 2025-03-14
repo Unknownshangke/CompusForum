@@ -17,27 +17,31 @@ import com.xzp.forum.util.JedisAdapter;
 
 @Controller
 public class RankController {
-	
+
 	@Autowired
 	private HostHolder hostHolder;
-	
+
 	@Autowired
 	private MessageDao messageDao;
-	
+
 	@Autowired
 	private UserDao userDao;
-	
+
 	@Autowired
 	private JedisAdapter jedisAdapter;
-	
+
 	private String rankKey="forumRankKey";
-	
+
 	@RequestMapping(path="/rank",method=RequestMethod.GET)
 	public String rankPoint(Model model) {
 		User user=hostHolder.getUser();
 		Long points = userDao.getPoints(user.getId());
 		jedisAdapter.zadd(rankKey, points, user.getUsername());
 		Set<String> pointSet=jedisAdapter.zrevrange(rankKey, 0, 9);
+
+		// 过滤掉不存在的用户
+		pointSet.removeIf(username -> userDao.getUserByUsername(username) == null);
+
 		model.addAttribute("user", user);
 		model.addAttribute("newMessage", messageDao.countMessageByToId(user.getId()));
 		model.addAttribute("pointSet", pointSet);

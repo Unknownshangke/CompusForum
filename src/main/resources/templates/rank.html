@@ -19,8 +19,8 @@
 				<a class="title" th:text="${pointName}" th:href="@{'/profile/' + ${userDao.getIdByUsername(pointName)}}">pointName</a>
 				<p th:text="|得分:|+${userDao.getPoints(userDao.getIdByUsername(pointName))}">
 					point
-				</p> 
-				<p th:text="|个人简介:|+${userDao.getUserByUsername(pointName).getIntroduction()}">
+				</p>
+				<p th:text="|个人简介:|+${userDao.getUserByUsername(pointName) != null ? userDao.getUserByUsername(pointName).getIntroduction() : '这个人很懒，什么都没写~'}">
 					point
 				</p>
 				<a th:href="@{'/profile/' + ${userDao.getIdByUsername(pointName)}}" class="secondary-content">

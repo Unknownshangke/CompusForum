@@ -1,5 +1,7 @@
 CREATE DATABASE boot_compusforum;
 
+USE boot_compusforum;
+
 -- User表
 CREATE TABLE `user` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,

@@ -28,19 +28,19 @@ public class TopicsController {
 
 	@Autowired
 	private AnswerDao answerDao;
-	
+
 	@Autowired
 	private MessageDao messageDao;
-	
+
 	@Autowired
 	private HostHolder localHost;
-	
+
 	@Autowired
 	private TopicsService topicsService;
-	
+
 	@Autowired
 	private PageService pageService;
-	
+
 	/**
 	 * 分页处理
 	 * @param category
@@ -54,7 +54,7 @@ public class TopicsController {
 		List<Topic> pageList=pageTopic.getItems();
 		String header = setHeader(category);
 		int topicsTotalNum=topicsService.getTopicsByCategory(category).size();
-		
+
 		User user=localHost.getUser();
 		model.addAttribute("user", user);
 		model.addAttribute("newMessage", messageDao.countMessageByToId(user.getId()));
@@ -69,7 +69,7 @@ public class TopicsController {
 		model.addAttribute("isUserTopicPage", false);
 		return "topics";
 	}
-	
+
 	@RequestMapping(path = "/topics/user/{id}_{currentPage}", method = RequestMethod.GET)
 	public String displayTopicsByUser(@PathVariable String id, @PathVariable int currentPage, Model model) {
 //		List<Topic> topics = topicsService.getTopicsByUser(id);
@@ -77,7 +77,7 @@ public class TopicsController {
 		List<Topic> topics=pageTopic.getItems();
 		int topicsTotalNum=topicsService.getTopicsByUser(id).size();
 		String header = setHeader("user");
-		
+
 		User user=localHost.getUser();
 		model.addAttribute("user", user);
 		model.addAttribute("newMessage", messageDao.countMessageByToId(user.getId()));
@@ -113,7 +113,7 @@ public class TopicsController {
 				return "User's topics";
 		}
 	}
-	
+
 	/**
 	 * 页面跳转bug
 	 * @param request
@@ -124,13 +124,13 @@ public class TopicsController {
 		String contextPath = request.getContextPath();
 		return new RedirectView(contextPath + "/message");
 	}
-	
+
 	@RequestMapping(path = "/topics/other/message", method = RequestMethod.GET)
 	public View topicTransformOther(HttpServletRequest request) {
 		String contextPath = request.getContextPath();
 		return new RedirectView(contextPath + "/message");
 	}
-	
+
 	@RequestMapping(path = "/topics/web/message", method = RequestMethod.GET)
 	public View topicTransformWeb(HttpServletRequest request) {
 		String contextPath = request.getContextPath();

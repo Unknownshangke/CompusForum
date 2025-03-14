@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorator="layout/online">
+<head>
+<title>用户管理</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// 全局变量
+let banModal;
+let sectionModal;
+let currentUserId = null;
+let currentUserRole = null;
+let lastFocusedElement = null;
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+	// 初始化模态框
+	banModal = new bootstrap.Modal(document.getElementById('banModal'), {
+		backdrop: 'static',
+		keyboard: false
+	});
+	sectionModal = new bootstrap.Modal(document.getElementById('sectionModal'), {
+		backdrop: 'static',
+		keyboard: false
+	});
+
+	// 为模态框添加事件监听器
+	document.getElementById('banModal').addEventListener('show.bs.modal', function() {
+		lastFocusedElement = document.activeElement;
+		// 将焦点设置到第一个可聚焦元素
+		const firstFocusable = this.querySelector('input, button, [tabindex]:not([tabindex="-1"])');
+		if (firstFocusable) {
+			firstFocusable.focus();
+		}
+	});
+
+	document.getElementById('banModal').addEventListener('hide.bs.modal', function() {
+		if (lastFocusedElement) {
+			lastFocusedElement.focus();
+		}
+	});
+
+	document.getElementById('sectionModal').addEventListener('show.bs.modal', function() {
+		lastFocusedElement = document.activeElement;
+		// 将焦点设置到第一个可聚焦元素
+		const firstFocusable = this.querySelector('input, button, [tabindex]:not([tabindex="-1"])');
+		if (firstFocusable) {
+			firstFocusable.focus();
+		}
+	});
+
+	document.getElementById('sectionModal').addEventListener('hide.bs.modal', function() {
+		if (lastFocusedElement) {
+			lastFocusedElement.focus();
+		}
+	});
+
+	// 为所有角色选择框添加原始值属性
+	document.querySelectorAll('select[data-user-id]').forEach(select => {
+		select.setAttribute('data-original-value', select.value);
+	});
+
+	// 绑定事件监听器
+	document.querySelectorAll('select[data-user-id]').forEach(select => {
+		select.addEventListener('change', function() {
+			updateUserRole(this);
+		});
+	});
+
+	document.querySelectorAll('button[data-action="ban"]').forEach(button => {
+		button.addEventListener('click', function(e) {
+			e.preventDefault();
+			showBanModal(this);
+		});
+	});
+
+	document.querySelectorAll('button[data-action="unban"]').forEach(button => {
+		button.addEventListener('click', function(e) {
+			e.preventDefault();
+			unbanUser(this);
+		});
+	});
+
+	document.querySelectorAll('button[data-action="delete"]').forEach(button => {
+		button.addEventListener('click', function(e) {
+			e.preventDefault();
+			deleteUser(this);
+		});
+	});
+});
+
+// 函数定义
+function showBanModal(button) {
+	const row = button.closest('tr');
+	console.log('当前行:', row); // 添加调试日志
+	const userId = row.querySelector('td:first-child').textContent;
+	console.log('从第一个单元格获取的用户ID:', userId); // 添加调试日志
+	if (!userId) {
+		alert('无法获取用户ID，请刷新页面重试');
+		return;
+	}
+	currentUserId = userId;
+	document.getElementById('banDuration').value = '7';
+	document.getElementById('banReason').value = '';
+	banModal.show();
+}
+
+function confirmBan() {
+	if (!currentUserId) {
+		alert('无法获取用户ID，请刷新页面重试');
+		return;
+	}
+
+	const duration = document.getElementById('banDuration').value;
+	const reason = document.getElementById('banReason').value;
+
+	if (!reason) {
+		alert('请输入封禁原因');
+		return;
+	}
+
+	// 计算封禁结束时间戳
+	const now = new Date();
+	let endTime;
+
+	if (duration === '0') {
+		// 永久封禁
+		endTime = 0;
+	} else {
+		// 临时封禁，计算结束时间
+		const endDate = new Date(now);
+		endDate.setDate(endDate.getDate() + parseInt(duration));
+		endTime = endDate.getTime();
+	}
+
+	if (!confirm('确定要封禁该用户吗？\n封禁时长：' + (duration === '0' ? '永久' : duration + '天') + '\n封禁原因：' + reason)) {
+		return;
+	}
+
+	console.log('开始封禁用户:', currentUserId); // 添加调试日志
+
+	fetch('/admin/users/' + currentUserId + '/ban', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+		},
+		body: new URLSearchParams({
+			endTime: endTime,
+			reason: reason
+		}).toString()
+	})
+	.then(response => {
+		if (!response.ok) {
+			throw new Error('网络请求失败');
+		}
+		return response.text();
+	})
+	.then(result => {
+		console.log('封禁结果:', result); // 添加调试日志
+		alert(result);
+		if (result === '用户已封禁') {
+			location.reload(); // 立即刷新页面
+		}
+	})
+	.catch(error => {
+		console.error('Error:', error);
+		alert('操作失败，请重试');
+	});
+
+	banModal.hide();
+}
+
+function unbanUser(button) {
+	const row = button.closest('tr');
+	console.log('当前行:', row); // 添加调试日志
+	const userId = row.querySelector('td:first-child').textContent;
+	console.log('从第一个单元格获取的用户ID:', userId); // 添加调试日志
+	if (!userId) {
+		alert('无法获取用户ID，请刷新页面重试');
+		return;
+	}
+
+	if (!confirm('确定要解封该用户吗？')) {
+		return;
+	}
+
+	fetch('/admin/users/' + userId + '/unban', {
+		method: 'POST'
+	})
+	.then(response => {
+		if (!response.ok) {
+			throw new Error('网络请求失败');
+		}
+		return response.text();
+	})
+	.then(result => {
+		console.log('解封结果:', result); // 添加调试日志
+		alert(result);
+		if (result === '用户已解封') {
+			location.reload(); // 立即刷新页面
+		}
+	})
+	.catch(error => {
+		console.error('Error:', error);
+		alert('操作失败，请重试');
+	});
+}
+
+function deleteUser(button) {
+	const row = button.closest('tr');
+	const userId = row.querySelector('td:first-child').textContent;
+	if (!userId) {
+		alert('无法获取用户ID，请刷新页面重试');
+		return;
+	}
+
+	if (!confirm('确定要删除该用户吗？\n此操作不可恢复！\n删除后该用户的所有数据将被永久删除！')) {
+		return;
+	}
+
+	fetch('/admin/users/' + userId + '/delete', {
+		method: 'POST'
+	})
+	.then(response => response.text())
+	.then(result => {
+		alert(result);
+		if (result === '用户已删除') {
+			location.reload();
+		}
+	})
+	.catch(error => {
+		console.error('Error:', error);
+		alert('操作失败，请重试');
+	});
+}
+
+function updateUserRole(select) {
+	const row = select.closest('tr');
+	const userId = row.querySelector('td:first-child').textContent;
+	console.log('当前操作用户ID:', userId); // 添加调试日志
+	if (!userId) {
+		alert('无法获取用户ID，请刷新页面重试');
+		select.value = select.getAttribute('data-original-value');
+		return;
+	}
+
+	const newRole = select.value;
+	currentUserId = userId;
+	currentUserRole = newRole;
+
+	if (newRole === 'MODERATOR') {
+		fetch('/admin/users/' + userId + '/moderator-sections')
+			.then(response => response.json())
+			.then(sections => {
+				document.querySelectorAll('.section-checkbox').forEach(checkbox => {
+					checkbox.checked = false;
+				});
+				sections.forEach(section => {
+					const checkbox = document.querySelector('.section-checkbox[value="' + section + '"]');
+					if (checkbox) {
+						checkbox.checked = true;
+					}
+				});
+				sectionModal.show();
+			})
+			.catch(error => {
+				console.error('Error:', error);
+				alert('获取版块权限失败');
+				select.value = select.getAttribute('data-original-value');
+			});
+	} else {
+		if (!confirm('确定要将该用户角色更改为' + (newRole === 'ADMIN' ? '管理员' : '普通用户') + '吗？')) {
+			select.value = select.getAttribute('data-original-value');
+			return;
+		}
+
+		fetch('/admin/users/' + userId + '/update-role', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded',
+			},
+			body: 'role=' + newRole
+		})
+		.then(response => response.text())
+		.then(result => {
+			alert(result);
+			if (result === '角色更新成功') {
+				location.reload();
+			} else {
+				select.value = select.getAttribute('data-original-value');
+			}
+		})
+		.catch(error => {
+			console.error('Error:', error);
+			alert('操作失败，请重试');
+			select.value = select.getAttribute('data-original-value');
+		});
+	}
+}
+
+function toggleAllSections(checkbox) {
+	const sections = document.querySelectorAll('.section-checkbox');
+	sections.forEach(section => {
+		section.checked = checkbox.checked;
+	});
+}
+
+function saveModeratorSections() {
+	if (!currentUserId) {
+		alert('无法获取用户ID，请刷新页面重试');
+		return;
+	}
+
+	const sections = document.querySelectorAll('.section-checkbox:checked');
+	const selectedSections = Array.from(sections).map(checkbox => checkbox.value);
+
+	if (!confirm('确定要更新该版务的负责版块吗？\n选中的版块：' + (selectedSections.length > 0 ? selectedSections.join('、') : '无'))) {
+		return;
+	}
+
+	fetch('/admin/users/' + currentUserId + '/update-sections', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+		},
+		body: 'sections=' + encodeURIComponent(JSON.stringify(selectedSections))
+	})
+	.then(response => response.text())
+	.then(result => {
+		alert(result);
+		if (result === '版块权限更新成功') {
+			location.reload();
+		}
+	})
+	.catch(error => {
+		console.error('Error:', error);
+		alert('操作失败，请重试');
+	});
+
+	sectionModal.hide();
+}
+</script>
+<style>
+body {
+    background-color: #f5f5f5;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.page-header {
+    background: #fff;
+    padding: 20px 0;
+    margin-bottom: 30px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-bottom: 1px solid #e0e0e0;
+}
+.page-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+}
+.page-title i {
+    margin-right: 10px;
+    color: #2196F3;
+}
+.page-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+.user-table th, .user-table td {
+    padding: 12px 15px;
+    border: 1px solid #eee;
+    text-align: left;
+}
+.user-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+}
+.user-table tr:hover {
+    background-color: #f5f5f5;
+}
+.role-select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    width: 120px;
+}
+.action-btn {
+    margin: 0 5px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.action-btn i {
+    font-size: 18px;
+}
+.banned {
+    color: #dc3545;
+}
+.modal {
+    max-height: 80%;
+    border-radius: 8px;
+}
+.modal-content {
+    padding: 20px;
+}
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+}
+.section-checkbox {
+    margin-right: 15px;
+    margin-bottom: 10px;
+}
+.ban-duration {
+    margin-top: 20px;
+}
+.input-field {
+    margin-bottom: 20px;
+}
+.input-field label {
+    color: #666;
+}
+.btn-flat {
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+.btn-flat:hover {
+    background-color: #f5f5f5;
+}
+.error-message {
+    background-color: #fff3f3;
+    border: 1px solid #ffcdd2;
+    color: #d32f2f;
+    padding: 10px 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+/* 导航栏样式 */
+.nav-item.active a,
+.nav-item a:hover,
+.navbar-brand:hover,
+.navbar-brand.active {
+    color: #333 !important;
+    text-decoration: none !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    background-color: #fff;
+}
+.navbar-brand {
+    color: #333 !important;
+    text-decoration: none !important;
+}
+.nav-item a {
+    color: #333 !important;
+    text-decoration: none !important;
+}
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.status-normal {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+.status-banned {
+    background-color: #ffebee;
+    color: #c62828;
+}
+.status-icon {
+    margin-right: 4px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+</style>
+</head>
+<body>
+	<main layout:fragment="content">
+	<header class="page-header">
+		<div class="container">
+			<h1 class="page-title">
+				<i class="material-icons">people</i>
+				用户管理
+			</h1>
+		</div>
+	</header>
+
+	<article class="container">
+		<div class="page-content">
+			<div class="row">
+				<div class="col s12">
+					<div th:if="${error}" class="error-message">
+						<p th:text="${error}">错误信息</p>
+					</div>
+					<table class="user-table" th:if="${users != null and users.size() > 0}">
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>用户名</th>
+								<th>邮箱</th>
+								<th>角色</th>
+								<th>状态</th>
+								<th>注册时间</th>
+								<th>操作</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="user : ${users}" th:class="${user.banned ? 'banned' : ''}" th:data-user-id="${user.id}">
+								<td th:text="${user.id}"></td>
+								<td th:text="${user.username}"></td>
+								<td th:text="${user.email}"></td>
+								<td>
+									<select class="form-select" th:data-user-id="${user.id}">
+										<option value="USER" th:selected="${user.role == 'USER'}">普通用户</option>
+										<option value="MODERATOR" th:selected="${user.role == 'MODERATOR'}">版务</option>
+										<option value="ADMIN" th:selected="${user.role == 'ADMIN'}">管理员</option>
+									</select>
+								</td>
+								<td>
+									<span th:text="${user.banned ? '已封禁' : '正常'}"
+										  th:class="${user.banned ? 'status-badge status-banned' : 'status-badge status-normal'}">
+										<i class="material-icons status-icon" th:text="${user.banned ? 'block' : 'check_circle'}"></i>
+									</span>
+								</td>
+								<td th:text="${user.displayParsedDate()}"></td>
+								<td>
+									<button class="btn btn-danger btn-sm action-btn"
+											th:if="${user.role != 'ADMIN'}"
+											th:data-user-id="${user.id}"
+											data-action="ban">
+										<i class="material-icons">block</i>
+									</button>
+									<button class="btn btn-success btn-sm action-btn"
+											th:if="${user.banned}"
+											th:data-user-id="${user.id}"
+											data-action="unban">
+										<i class="material-icons">check_circle</i>
+									</button>
+									<button class="btn btn-danger btn-sm action-btn"
+											th:if="${user.role != 'ADMIN'}"
+											th:data-user-id="${user.id}"
+											data-action="delete">
+										<i class="material-icons">delete</i>
+									</button>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</article>
+
+	<!-- 封禁用户模态框 -->
+	<div class="modal fade" id="banModal" tabindex="-1" role="dialog" aria-labelledby="banModalLabel" aria-modal="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="banModalLabel">封禁用户</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+				</div>
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="banDuration" class="form-label">封禁时长（天）</label>
+						<input type="number" class="form-control" id="banDuration" min="1" value="7" aria-describedby="banDurationHelp" />
+						<div class="form-text" id="banDurationHelp">输入0表示永久封禁</div>
+					</div>
+					<div class="mb-3">
+						<label for="banReason" class="form-label">封禁原因</label>
+						<textarea class="form-control" id="banReason" rows="3" required="required" aria-required="true"></textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+					<button type="button" class="btn btn-danger" onclick="confirmBan()">确认封禁</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 版块选择模态框 -->
+	<div class="modal fade" id="sectionModal" tabindex="-1" role="dialog" aria-labelledby="sectionModalLabel" aria-modal="true">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="sectionModalLabel">选择负责版块</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+				</div>
+				<div class="modal-body">
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="allSections" onchange="toggleAllSections(this)" />
+						<label class="form-check-label" for="allSections">全部版块</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input section-checkbox" type="checkbox" value="Java SE" id="javaSE" />
+						<label class="form-check-label" for="javaSE">Java SE</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input section-checkbox" type="checkbox" value="Java EE" id="javaEE" />
+						<label class="form-check-label" for="javaEE">Java EE</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input section-checkbox" type="checkbox" value="MyBatis" id="mybatis" />
+						<label class="form-check-label" for="mybatis">MyBatis</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input section-checkbox" type="checkbox" value="Spring" id="spring" />
+						<label class="form-check-label" for="spring">Spring</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input section-checkbox" type="checkbox" value="前端" id="frontend" />
+						<label class="form-check-label" for="frontend">前端</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input section-checkbox" type="checkbox" value="其他" id="other" />
+						<label class="form-check-label" for="other">其他</label>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+					<button type="button" class="btn btn-primary" onclick="saveModeratorSections()">保存</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	</main>
+</body>
+</html>

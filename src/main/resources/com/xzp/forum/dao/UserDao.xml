@@ -3,35 +3,31 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.xzp.forum.dao.UserDao">
 	<sql id="tablename">user</sql>
-	<sql id="insertFields">username,password,introduction,created_date</sql>
-	<sql id="selectFields">id,username,password,introduction,created_date
-	</sql>
+	<sql id="insertFields">username,password,introduction,created_date,role,is_admin,is_moderator,email,avatar,is_banned,ban_reason,unban_date</sql>
+	<sql id="selectFields">id, created_date, introduction, password, username, `role`, email, avatar, is_admin, is_moderator, ban_reason, unban_date, is_banned</sql>
 
 	<insert id="addUser" parameterType="com.xzp.forum.model.User"
 		useGeneratedKeys="true" keyProperty="id">
-		INSERT INTO
-		<include refid="tablename" />
-		(
+		INSERT INTO user (
 		<include refid="insertFields" />
-		) VALUES ( #{username}, #{password}, #{introduction}, #{createdDate} )
+		) VALUES ( #{username}, #{password}, #{introduction}, #{createdDate}, #{role}, #{isAdmin}, #{isModerator}, #{email}, #{avatar}, #{banned}, #{banReason}, #{unbanDate} )
 	</insert>
 
-	<select id="getUserByUsername" resultType="com.xzp.forum.model.User"
-		parameterType="string">
+	<select id="getUserByUsername" resultType="com.xzp.forum.model.User">
 		SELECT
-		<include refid="selectFields" />
-		FROM
-		<include refid="tablename" />
+			id, username, password, introduction, created_date,
+			role, is_admin, is_moderator, email, avatar,
+			is_banned, ban_reason, unban_date
+		FROM user
 		WHERE username = #{username}
-
 	</select>
 
-	<select id="getUserById" resultType="com.xzp.forum.model.User"
-		parameterType="long">
+	<select id="getUserById" resultType="com.xzp.forum.model.User">
 		SELECT
-		<include refid="selectFields" />
-		FROM
-		<include refid="tablename" />
+			id, username, password, introduction, created_date,
+			role, is_admin, is_moderator, email, avatar,
+			 ban_reason, unban_date, is_banned
+		FROM user
 		WHERE id = #{id}
 	</select>
 
@@ -57,5 +53,51 @@
 		SELECT username FROM
 		<include refid="tablename" />
 		WHERE id = #{id}
+	</select>
+
+	<select id="getAllUsers" resultType="com.xzp.forum.model.User">
+		SELECT
+		<include refid="selectFields" />
+		FROM
+		<include refid="tablename" />
+		ORDER BY created_date DESC
+	</select>
+
+	<update id="updateUser" parameterType="com.xzp.forum.model.User">
+		UPDATE
+		<include refid="tablename" />
+		SET username = #{username},
+			password = #{password},
+			introduction = #{introduction},
+			role = #{role},
+			is_admin = #{isAdmin},
+			is_moderator = #{isModerator},
+			email = #{email},
+			avatar = #{avatar},
+			is_banned = #{banned},
+			ban_reason = #{banReason},
+			unban_date = #{unbanDate}
+		WHERE id = #{id}
+	</update>
+
+	<insert id="createUser" parameterType="com.xzp.forum.model.User">
+		INSERT INTO user (username, password, email, avatar, is_admin, is_moderator, introduction, created_date, role, is_banned, ban_reason, unban_date)
+		VALUES (#{username}, #{password}, #{email}, #{avatar}, #{isAdmin}, #{isModerator}, #{introduction}, NOW(), #{role}, #{banned}, #{banReason}, #{unbanDate})
+	</insert>
+
+	<delete id="deleteUser" parameterType="long">
+		DELETE FROM user WHERE id = #{id}
+	</delete>
+
+	<insert id="addModeratorSection">
+		INSERT INTO user_moderator_permissions (user_id, section) VALUES (#{userId}, #{section})
+	</insert>
+
+	<delete id="clearModeratorSections" parameterType="long">
+		DELETE FROM user_moderator_permissions WHERE user_id = #{userId}
+	</delete>
+
+	<select id="getModeratorSections" resultType="string" parameterType="long">
+		SELECT section FROM user_moderator_permissions WHERE user_id = #{userId}
 	</select>
 </mapper>

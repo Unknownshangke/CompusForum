@@ -39,53 +39,53 @@ import com.xzp.forum.util.HostHolder;
 
 /**
  * 个人简介接口
- * 
+ *
  * @author xiezhiping
  *
  */
 @Controller
 public class ProfileController {
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(ProfileController.class);
-	
+
 	@Autowired
 	private UserDao userDao;
-	
+
 	@Autowired
 	private TopicDao topicDao;
-	
+
 	@Autowired
 	private MessageDao messageDao;
-	
+
 	@Autowired
 	private AnswerDao answerDao;
-	
+
 	@Autowired
 	private ImageDao imageDao;
-	
+
 	@Autowired
 	private HostHolder hostHolder;
-	
+
 	@Autowired
 	private FollowService followService;
-	
+
 	@Autowired
 	QiniuService qiniuService;
-	
+
 	@RequestMapping(path = "/profile", method = RequestMethod.GET)
 	public String displayMyProfile(Model model) {
 		User user = hostHolder.getUser();
 		logger.warn("[displayMyProfile] display profile, username:{}",user.getUsername());
 		Long points = userDao.getPoints(user.getId());
-//		jedisAdapter.zadd(rankKey, points, user.getUsername());
-		
+
 		Long numberOfTopics = topicDao.countTopicsByUser_Id(user.getId());
 		Long numberOfAnswers = answerDao.countAnswersByUser_Id(user.getId());
 		Long numberOfHelped = answerDao.countAnswersByUser_IdAndUseful(user.getId(), true);
 		List<String> myImgs=imageDao.getImgByUserId(user.getId());
 		List<String> myAllImgs=imageDao.getAllImgByUserId(user.getId());
-		
+
 		model.addAttribute("user", user);
+		model.addAttribute("otherUser", user);
 		model.addAttribute("newMessage", messageDao.countMessageByToId(user.getId()));
 		model.addAttribute("points", points);
 		model.addAttribute("numberOfTopics", numberOfTopics);
@@ -94,34 +94,45 @@ public class ProfileController {
 		model.addAttribute("myImgs", myImgs);
 		model.addAttribute("isHasMoreImg", myAllImgs.size()>myImgs.size());
 		model.addAttribute("switch", true);
+		model.addAttribute("followNums", followService.getFollowNum(user.getUsername(), user.getId()));
+		model.addAttribute("commonFansNum", 0);
+		model.addAttribute("isFollowed", false);
 		return "profile";
 	}
 
 	@RequestMapping(path = "/profile/{id}", method = RequestMethod.GET)
 	public String displayProfileById(@PathVariable Long id, Model model) {
-		User user = userDao.getUserById(id);
-		logger.warn("[displayMyProfile] display profile, username:{}",user.getUsername());
-		Long points = userDao.getPoints(user.getId());
+		User targetUser = userDao.getUserById(id);
+		if (targetUser == null) {
+			return "redirect:/topics/all/1";
+		}
+
+		User currentUser = hostHolder.getUser();
+		if (currentUser == null) {
+			return "redirect:/login";
+		}
+
+		logger.warn("[displayProfileById] display profile, username:{}", targetUser.getUsername());
+		Long points = userDao.getPoints(targetUser.getId());
 		Long numberOfTopics = topicDao.countTopicsByUser_Id(id);
 		Long numberOfAnswers = answerDao.countAnswersByUser_Id(id);
 		Long numberOfHelped = answerDao.countAnswersByUser_IdAndUseful(id, true);
-		List<String> myImgs=imageDao.getImgByUserId(user.getId());
-		List<String> myAllImgs=imageDao.getAllImgByUserId(user.getId());
-		User otherUser=hostHolder.getUser();
-		boolean isFollowed = followService.isFollowed(otherUser.getId(), id);
-		
-		model.addAttribute("user", otherUser);
-		model.addAttribute("otherUser", user);
-		model.addAttribute("newMessage", messageDao.countMessageByToId(hostHolder.getUser().getId()));
+		List<String> myImgs = imageDao.getImgByUserId(targetUser.getId());
+		List<String> myAllImgs = imageDao.getAllImgByUserId(targetUser.getId());
+		boolean isFollowed = followService.isFollowed(currentUser.getId(), id);
+
+		model.addAttribute("user", currentUser);
+		model.addAttribute("otherUser", targetUser);
+		model.addAttribute("newMessage", messageDao.countMessageByToId(currentUser.getId()));
 		model.addAttribute("points", points);
 		model.addAttribute("numberOfTopics", numberOfTopics);
 		model.addAttribute("numberOfAnswers", numberOfAnswers);
 		model.addAttribute("numberOfHelped", numberOfHelped);
 		model.addAttribute("myImgs", myImgs);
-		model.addAttribute("isHasMoreImg", myAllImgs.size()>myImgs.size());
-		model.addAttribute("switch", (user.getId()==otherUser.getId())?true:false);
-		model.addAttribute("followNums", followService.getFollowNum(user.getUsername(), user.getId()));
-		model.addAttribute("commonFansNum", followService.getCommonFans(user.getId(), otherUser.getId()).size());
+		model.addAttribute("isHasMoreImg", myAllImgs.size() > myImgs.size());
+		model.addAttribute("switch", (targetUser.getId().equals(currentUser.getId())));
+		model.addAttribute("followNums", followService.getFollowNum(targetUser.getUsername(), targetUser.getId()));
+		model.addAttribute("commonFansNum", followService.getCommonFans(targetUser.getId(), currentUser.getId()).size());
 		model.addAttribute("isFollowed", isFollowed);
 		return "profile";
 	}
@@ -147,18 +158,18 @@ public class ProfileController {
 		String contextPath = request.getContextPath();
 		return new RedirectView(contextPath + "/profile");
 	}
-	
+
 	@RequestMapping(path="/imageWall/{id}",method=RequestMethod.GET)
 	public String imageWall(@PathVariable Long id, Model model) {
 		User user = userDao.getUserById(id);
 		List<String> myAllImgs=imageDao.getAllImgByUserId(user.getId());
-		
+
 		model.addAttribute("user", user);
 		model.addAttribute("myImgs", myAllImgs);
 		model.addAttribute("newMessage", messageDao.countMessageByToId(user.getId()));
 		return "imageWall";
 	}
-	
+
 	@RequestMapping(path="/upload",method=RequestMethod.POST)
 	public String uploadImage(@RequestParam("file") MultipartFile file,HttpServletRequest request, Model model) {
 		try {
@@ -170,7 +181,7 @@ public class ProfileController {
 			image.setImgUrl(fileUrl);
 			image.setIdUser(hostHolder.getUser().getId());
 			imageDao.addImg(image);
-			
+
 			User user = hostHolder.getUser();
 			Long points = userDao.getPoints(user.getId());
 			Long numberOfTopics = topicDao.countTopicsByUser_Id(user.getId());
@@ -194,7 +205,7 @@ public class ProfileController {
 			return "profile";
 		}
 	}
-	
+
 	/**
 	 * userId用户关注otherUserId用户
 	 * @param userId
@@ -210,7 +221,7 @@ public class ProfileController {
 		followService.addFollow(otherUser.getUsername(), userId, otherUserId);
 		return "follow success!";
 	}
-	
+
 	@RequestMapping(path="/fans/{userId}",method=RequestMethod.GET)
 	@ResponseBody
 	public String displayFans(@PathVariable Long userId){
@@ -221,7 +232,7 @@ public class ProfileController {
 		}
 		return JSON.toJSONString(followFansMap);
 	}
-	
+
 	@RequestMapping(path="/commonfans/{userId}_{otherUserId}",method=RequestMethod.GET)
 	@ResponseBody
 	public String displayCommonFans(@PathVariable Long userId, @PathVariable Long otherUserId) {
@@ -233,13 +244,13 @@ public class ProfileController {
 		}
 		return JSON.toJSONString(commonFansMap);
 	}
-	
+
 	@RequestMapping(path = "/profile/message", method = RequestMethod.GET)
 	public View topicsTransform(HttpServletRequest request) {
 		String contextPath = request.getContextPath();
 		return new RedirectView(contextPath + "/message");
 	}
-	
+
 	@RequestMapping(path = "/imageWall/message", method = RequestMethod.GET)
 	public View messageTransform(HttpServletRequest request) {
 		String contextPath = request.getContextPath();

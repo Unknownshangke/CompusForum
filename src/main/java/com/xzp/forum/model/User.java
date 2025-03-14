@@ -1,49 +1,76 @@
 package com.xzp.forum.model;
 
-import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.ArrayList;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import javax.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.xzp.forum.util.DateUtils;
+
 /**
  * User的model实体层
- * 
+ *
  * @author xiezhiping
  *
  */
+@Entity
+@Table(name = "user")
 public class User implements UserDetails {
-	private Long id; //用户的userId
-	private String username; //用户名
-	private String password;//用户密码
-	private String introduction;//用户的介绍
-	private Date createdDate;//用户的注册时间
-	
-	private List<Answer> answers;
-	private List<Topic> topics;
-	
-	public List<Answer> getAnswers() {
-		return answers;
-	}
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
 
-	public void setAnswers(List<Answer> answers) {
-		this.answers = answers;
-	}
+	@Column(unique = true)
+	private String username;
 
-	public List<Topic> getTopics() {
-		return topics;
-	}
+	private String password;
 
-	public void setTopics(List<Topic> topics) {
-		this.topics = topics;
-	}
+	@Column(unique = true)
+	private String email;
+
+	private String avatar;
+
+	@Column(name = "is_admin")
+	private boolean isAdmin = false;
+
+	@Column(name = "is_moderator")
+	private boolean isModerator = false;
+
+	@Column(name = "is_banned")
+	private boolean isBanned = false;
+
+	@Column(name = "ban_reason")
+	private String banReason;
+
+	@Column(name = "unban_date")
+	private Date unbanDate;
+
+	@ElementCollection
+	@CollectionTable(name = "user_moderator_sections", joinColumns = @JoinColumn(name = "user_id"))
+	@Column(name = "section")
+	private Set<String> moderatorSections = new HashSet<>();
+
+	@Column(columnDefinition = "TEXT")
+	private String introduction;
+
+	@Column(name = "created_date")
+	private Date createdDate;
+
+	private String role = "USER";
+
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+	private List<Answer> answers = new ArrayList<>();
+
+	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+	private List<Topic> topics = new ArrayList<>();
 
 	public Long getId() {
 		return id;
@@ -69,6 +96,78 @@ public class User implements UserDetails {
 		this.password = password;
 	}
 
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getAvatar() {
+		return avatar;
+	}
+
+	public void setAvatar(String avatar) {
+		this.avatar = avatar;
+	}
+
+	public boolean isAdmin() {
+		return isAdmin;
+	}
+
+	public void setAdmin(boolean admin) {
+		isAdmin = admin;
+	}
+
+	public boolean isModerator() {
+		return isModerator;
+	}
+
+	public void setModerator(boolean moderator) {
+		isModerator = moderator;
+	}
+
+	public boolean isBanned() {
+		return isBanned;
+	}
+
+	public void setBanned(boolean isBanned) {
+		this.isBanned = isBanned;
+	}
+
+	public String getBanReason() {
+		return banReason;
+	}
+
+	public void setBanReason(String banReason) {
+		this.banReason = banReason;
+	}
+
+	public Date getUnbanDate() {
+		return unbanDate;
+	}
+
+	public void setUnbanDate(Date unbanDate) {
+		this.unbanDate = unbanDate;
+	}
+
+	public Set<String> getModeratorSections() {
+		return moderatorSections;
+	}
+
+	public void setModeratorSections(Set<String> moderatorSections) {
+		this.moderatorSections = moderatorSections;
+	}
+
+	public void addModeratorSection(String section) {
+		this.moderatorSections.add(section);
+	}
+
+	public void removeModeratorSection(String section) {
+		this.moderatorSections.remove(section);
+	}
+
 	public String getIntroduction() {
 		return introduction;
 	}
@@ -85,42 +184,73 @@ public class User implements UserDetails {
 		this.createdDate = createdDate;
 	}
 
-	@Override
-	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return Collections.singletonList(new SimpleGrantedAuthority("USER"));
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+
+	public List<Answer> getAnswers() {
+		return answers;
+	}
+
+	public void setAnswers(List<Answer> answers) {
+		this.answers = answers;
+	}
+
+	public List<Topic> getTopics() {
+		return topics;
+	}
+
+	public void setTopics(List<Topic> topics) {
+		this.topics = topics;
 	}
 
 	@Override
+	@JsonIgnore
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+		List<GrantedAuthority> authorities = new ArrayList<>();
+		if (role != null) {
+			authorities.add(new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()));
+		}
+		return authorities;
+	}
+
+	@Override
+	@JsonIgnore
 	public boolean isAccountNonExpired() {
 		return true;
 	}
 
 	@Override
+	@JsonIgnore
 	public boolean isAccountNonLocked() {
-		return true;
+		return !isBanned;
 	}
 
 	@Override
+	@JsonIgnore
 	public boolean isCredentialsNonExpired() {
 		return true;
 	}
 
 	@Override
+	@JsonIgnore
 	public boolean isEnabled() {
-		return true;
-	}
-
-	public String displayContentOfOptional() {
-		if (Optional.ofNullable(introduction).isPresent())
-			return Optional.ofNullable(introduction).get();
-		else
-			return "";
+		return !isBanned;
 	}
 
 	public String displayParsedDate() {
-		SimpleDateFormat formatter=new SimpleDateFormat("yyyy-MM-dd");
-//		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-//		return this.createdDate.format(formatter);
-		return formatter.format(this.createdDate);
+		return DateUtils.getParseDate(this.createdDate);
+	}
+
+	public String displayContentOfOptional() {
+		return introduction != null ? introduction : "";
+	}
+
+	public boolean hasModeratorPermission(String section) {
+		return isAdmin || (isModerator && moderatorSections.contains(section));
 	}
 }

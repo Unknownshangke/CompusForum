@@ -25,7 +25,7 @@ public class QiniuService {
 	String ACCESS_KEY = "VT8wfuxppE2jq6FzRcnSQvPkDfr0V45jA581P2GM";
 	String SECRET_KEY = "_xzbgHK5Ej44XPoeML36CvunX6R6alRvAjO0xJ96";
 	// 要上传的空间
-	String bucketname = "shangke7ns";
+	String bucketname = "shangke7nss";
 
 	// 密钥配置
 	Auth auth = Auth.create(ACCESS_KEY, SECRET_KEY);
@@ -48,7 +48,9 @@ public class QiniuService {
 				return null;
 			}
 			String fileExt = file.getOriginalFilename().substring(dotPos + 1).toLowerCase();
-			if (!FileUtil.isFileAllowed(fileExt)) {
+			// 只允许PNG文件
+			if (!"png".equals(fileExt)) {
+				logger.error("不支持的文件类型: " + fileExt);
 				return null;
 			}
 
@@ -57,7 +59,31 @@ public class QiniuService {
 			Response res = uploadManager.put(file.getBytes(), fileName, getUpToken());
 			// 打印返回的信息
 			if (res.isOK() && res.isJson()) {
-				// 返回这张存储照片的地址http://ox6xu9hb7.bkt.clouddn.com/f07ff5a8945b4d6fb1bfc4cc8910e0fb.png，json串格式为：{"msg":"http://ox6xu9hb7.bkt.clouddn.com/f07ff5a8945b4d6fb1bfc4cc8910e0fb.png","code":0}
+				return QINIU_IMAGE_DOMAIN + JSONObject.parseObject(res.bodyString()).get("key");
+			} else {
+				logger.error("七牛异常:" + res.bodyString());
+				return null;
+			}
+		} catch (QiniuException e) {
+			// 请求失败时打印的异常的信息
+			logger.error("七牛异常:" + e.getMessage());
+			return null;
+		}
+	}
+
+	public String saveImage(MultipartFile file, String fileName) throws IOException {
+		try {
+			// 验证文件类型
+			String contentType = file.getContentType();
+			if (contentType == null || !"image/png".equals(contentType)) {
+				logger.error("不支持的文件类型: " + contentType);
+				return null;
+			}
+
+			// 调用put方法上传
+			Response res = uploadManager.put(file.getBytes(), fileName, getUpToken());
+			// 打印返回的信息
+			if (res.isOK() && res.isJson()) {
 				return QINIU_IMAGE_DOMAIN + JSONObject.parseObject(res.bodyString()).get("key");
 			} else {
 				logger.error("七牛异常:" + res.bodyString());
